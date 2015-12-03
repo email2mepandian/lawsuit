@@ -1,0 +1,107 @@
+function displayresults(){
+  $(document).ready(function(){
+
+    jQuery.extend({
+	
+  	getQueryParameters : function(str) {
+          return (str || document.location.search).replace(/(^\?)/,'').split("&").map(function(n){return n = n.split("="),this[n[0]] = n[1],this}.bind({}))[0];
+  	}
+
+    });
+
+
+    var searchText = $.getQueryParameters()['searchText'];
+    var selectedLatLng  = $.getQueryParameters()['latlng'];
+    var cityname = decodeURIComponent($.getQueryParameters()['currentLoc']);
+    
+    var searchUri =  "https://104.197.28.6:8983/solr/lscore/select?q="+searchText+"&pt="+selectedLatLng+"&sfield=geopoint&d=5&fq={!geofilt}"
+    +"&fl=*&fl=distance:geodist()&rows=100&sort=geodist()%20asc&facet.field=rating&facet.field=practice&facet.field=language&facet=true&"
+    +"facet.mincount=1&wt=json";
+
+    var result;
+     
+    $.ajax({
+        type: "GET",
+        url: searchUri,
+        dataType: "json",
+        contentType: "application/json",
+        accepts: "application/json",
+        success: function (resp) {
+	    generateheader(cityname, searchText, resp.response.numFound);
+            for (i=0; i < resp.response.docs.length; i++) {
+        	generateresultshtml(resp.response.docs[i]);
+     	    }
+        },
+        error: function (response, error){
+            console.log(response.status);
+        }
+    });
+
+  });
+}
+
+function generateheader(cityname, searchtext, recordscount) {
+   var searchheader = '<h3>' + recordscount + ' lawyer(s) found near ' + cityname + ' for "' + searchtext + '" </h3>';
+   $(searchheader).appendTo('#searchheader'); 
+}
+
+function generateresultshtml(lawyer) {
+
+     var searchresults = '<div class="client-details">';
+     searchresults = searchresults +'<div class="client-logo"> <img src="images/' + lawyer.profile_picture + '" alt="" /></div>';
+     searchresults = searchresults +'<div class="client-desc">';
+     searchresults = searchresults +'<h4>' + lawyer.name + '</h4>';
+     searchresults = searchresults +'<p>Sed sit amet risus eget mauris sollicitudin posuere. Integer dictum, ligula id feugiat viverra, ex purus euismod nulla</p>';
+     searchresults = searchresults +'<p>' + lawyer.practice + '</p>';
+     searchresults = searchresults +'<div class="clear block">';
+
+     if(lawyer.language.length > 0) { 
+        searchresults = searchresults +'<div class="pull-left">Language : '; 
+        for(x=0; x < lawyer.language.length; x++) {
+           searchresults = searchresults + lawyer.language[x] + ', ';
+        }
+        searchresults = searchresults +'</div>';
+        searchresults = searchresults +'<div class="star-vote pull-right">';
+        searchresults = searchresults +'<ul class="list-inline star-vote">';
+     }
+
+     var rating = lawyer.rating;
+     var fullstar = Math.floor(rating);
+     var starcount = 0;
+
+     for(x=1; x <= fullstar; x++) {
+        searchresults = searchresults +'<li><i class="color-blue fa fa-star"></i></li>';
+        starcount++;
+     }
+
+     var halfstar = Math.ceil(rating-starcount);
+
+     for(x=0; x < halfstar; x++) {
+        searchresults = searchresults +'<li><i class="color-blue fa fa-star-half-o"></i></li>';
+        starcount++;
+     }
+
+
+     for(x=0; x < 5-starcount; x++) {
+        searchresults = searchresults +'<li><i class="color-blue fa fa-star-o"></i></li>';
+     }
+
+     searchresults = searchresults +'<li>10 Reviews</li>';
+     searchresults = searchresults +'</ul>';
+     searchresults = searchresults +'</div>';
+     searchresults = searchresults +'</div>';
+     searchresults = searchresults +'<div class="client-contact">';
+     searchresults = searchresults +'<ul>';
+     searchresults = searchresults +'<li><a href="tel:' + lawyer.phone + '"><i class="fa fa-phone"></i> Call<span class="hidden-xs">   ' + lawyer.phone + '</span></a></li>';
+     searchresults = searchresults +'<li><a href="mailto:' + lawyer.email + '"><i class="fa fa-envelope-o"></i> Email</a></li>';
+     searchresults = searchresults +'<li><a href="#"><i class="fa fa-desktop"></i> Website</a></li>';
+     searchresults = searchresults +'</ul>';
+     searchresults = searchresults +'</div>';
+     searchresults = searchresults +'</div>';
+     searchresults = searchresults +'</div>';
+
+     $(searchresults).appendTo('#searchresultsdiv');
+
+}
+
+displayresults();
